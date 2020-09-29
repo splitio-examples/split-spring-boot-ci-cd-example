@@ -20,7 +20,7 @@ public class WeatherService {
     private static final String WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather?q={city},{country}&APPID={apiKey}&units=imperial";
 
     @Value("#{ @environment['openweathermap.api-key'] }")
-    private String apiKey;
+    private String weatherApiKey;
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
@@ -31,7 +31,7 @@ public class WeatherService {
     }
 
     public CurrentWeather getCurrentWeather(String city, String country) {
-        URI url = new UriTemplate(WEATHER_URL).expand(city, country, apiKey);
+        URI url = new UriTemplate(WEATHER_URL).expand(city, country, weatherApiKey);
         ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
 
         return convert(response);
@@ -40,10 +40,13 @@ public class WeatherService {
     private CurrentWeather convert(ResponseEntity<String> response) {
         try {
             JsonNode root = objectMapper.readTree(response.getBody());
-            return new CurrentWeather(root.path("weather").get(0).path("main").asText(),
-                    BigDecimal.valueOf(root.path("main").path("temp").asDouble()),
-                    BigDecimal.valueOf(root.path("main").path("feels_like").asDouble()),
-                    BigDecimal.valueOf(root.path("wind").path("speed").asDouble()));
+            return new CurrentWeather(
+                root.path("name").asText(), root.path("sys").path("country").asText(),
+                root.path("weather").get(0).path("main").asText(),
+                BigDecimal.valueOf(root.path("main").path("temp").asDouble()),
+                BigDecimal.valueOf(root.path("main").path("feels_like").asDouble()),
+                BigDecimal.valueOf(root.path("wind").path("speed").asDouble())
+            );
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Error parsing JSON", e);
         }
